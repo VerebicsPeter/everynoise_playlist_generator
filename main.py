@@ -4,6 +4,7 @@ import downloader
 import random
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
+from typing import Protocol
 
 
 @dataclasses.dataclass
@@ -19,6 +20,30 @@ class Track:
     link: str  # spotify link
 
 
+@dataclasses.dataclass
+class Playlist:
+    name: str
+    tracks: list[Track]
+
+
+class PlaylistExporter(Protocol):
+    def export(self, playlist: Playlist):
+        ...
+
+
+class YouTubeExporter(PlaylistExporter):
+    def __init__(self):
+        # Create the downloads directory if it's not present
+        if not os.path.isdir("./downloads"): os.mkdir("./downloads")
+
+    def export(self, playlist: Playlist):
+        playlist_path = f'./downloads/{playlist.name}'
+        if not os.path.isdir(playlist_path): os.mkdir(playlist_path)
+        for track in playlist.tracks:
+            query = f"{track.artist.name} - {track.name}"
+            downloader.download_audio(query, playlist_path)
+
+
 def catchall(func):
     def wrapper(*args, **kwargs):
         try:
@@ -26,6 +51,7 @@ def catchall(func):
         except Exception as e:
             print(f"An error occurred: {e}")
             return []
+
     return wrapper
 
 
@@ -117,27 +143,39 @@ def get_tracks(artist: Artist) -> list[Track]:
     return tracks
 
 
-def generate_playlist(genre: str,
+def generate_playlist(
+    genre: str,
     max_artists_per_genre=5,
     max_tracks_per_artist=5,
+    exporter: PlaylistExporter | None = None,
 ):
-    # Create the downloads directory if it does not exist
-    if not os.path.isdir("./downloads"): os.mkdir("./downloads")
     # Get the artists
     artists = get_artists(genre)
-    # Sample artists
+
+    if not artists:
+        print(f"No artists in genre: {genre}")
+        return
+
+    selected_tracks: list[Track] = []
+    # Sample artists in genre
     for artist in random.sample(artists, min(len(artists), max_artists_per_genre)):
         tracks = get_tracks(artist)
-        # Sample tracks and dowload them
-        for track in random.sample(tracks, min(len(tracks), max_tracks_per_artist)):
-            query = f"{artist.name} - {track.name}"
-            downloader.download_song(query, "downloads")
+        # Sample tracks
+        tracks = random.sample(tracks, min(len(tracks), max_tracks_per_artist))
+        selected_tracks.extend(tracks)
+
+    playlist = Playlist("new_playlist", selected_tracks)
+    
+    if exporter is not None:
+        print("Exporting playlist.")
+        exporter.export(playlist)
 
 
 if __name__ == "__main__":
-    genre = "gypsy fusion"
+    genre = "pop"
     generate_playlist(
         genre=genre,
-        max_artists_per_genre=5,
+        max_artists_per_genre=3,
         max_tracks_per_artist=1,
+        exporter=YouTubeExporter(),
     )
