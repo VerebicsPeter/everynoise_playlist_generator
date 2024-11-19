@@ -1,44 +1,40 @@
+import os
 import random
 
 import uuid
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from data.models import Artist, Track, Playlist
+from fastapi.background import BackgroundTasks
+from fastapi.responses import StreamingResponse
+
+from sqlalchemy.orm import sessionmaker
+
+from data.db import engine, Genre
+from data.schemas import ArtistSchema, TrackSchema, PlaylistSchema
 from scrapers import everynoise
 from services import exporter
 
 
-# Global state for now, TODO: database and caching!!!
-playlists = {}
+Session = sessionmaker(bind=engine)
+session = Session()
 
+# Global state for now
+# TODO: database and caching
+playlists: dict[UUID, PlaylistSchema] = {}
 
 router = APIRouter()
 
 
-def get_artists(genre: str) -> list[Artist]:
-    """Get artists of a genre"""
-    genre = genre.replace(" ", "")
-    data = everynoise.scrape_genre_data(
-        f"https://everynoise.com/engenremap-{genre}.html"
-    )
-    artists = [
-        Artist(
-            name=row["artist_name"],
-            link=row["artist_link"],
-        )
-        for row in data
-    ]
-    return artists
-
-
-def get_tracks(artist: Artist) -> list[Track]:
+def get_tracks(artist: ArtistSchema) -> list[TrackSchema]:
     """Get tracks of an artist"""
-    data = everynoise.scrape_artist_data(f"https://everynoise.com/{artist.link}")
+    data = everynoise.scrape_artist_data(
+        f"https://everynoise.com/artistprofile.cgi?id={artist.link}"
+    )
     tracks = [
-        Track(
+        TrackSchema(
             artist=artist,
-            title=row["track_name"],
+            name=row["track_name"],
             link=row["track_link"],
         )
         for row in data
@@ -61,34 +57,64 @@ def index() -> dict:
 
 @router.get("/generate")
 def generate_playlist(
-    genre: str = "pop",
-    max_artists: int = 5,
+    name: str = "new playlist",
+    genre_name: str = "pop",
+    num_artists: int = 5,
     tracks_per_artist: int = 3,
 ) -> dict:
-    # Get the artists
-    artists = get_artists(genre)
+    genre = session.query(Genre).filter_by(name=genre_name).first()
+
+    if not genre:
+        return {"message": f"No genre named: {genre_name}"}
+
+    artists = genre.artists
 
     if not artists:
-        return {"message": f"No artists in genre: {genre}"}
+        return {"message": f"No artists in genre: {genre_name}"}
 
-    selected_tracks: list[Track] = []
+    selected_tracks: list[TrackSchema] = []
     # Sample artists in genre
-    for artist in random.sample(artists, min(len(artists), max_artists)):
-        tracks = get_tracks(artist)
+    for artist in random.sample(artists, min(len(artists), num_artists)):
+        tracks = get_tracks(ArtistSchema(name=artist.name, link=artist.link))
         # Sample tracks
         tracks = random.sample(tracks, min(len(tracks), tracks_per_artist))
         selected_tracks.extend(tracks)
 
-    playlist = Playlist(uuid=uuid.uuid4(), name="new_playlist", tracks=selected_tracks)
+    playlist = PlaylistSchema(uuid=uuid.uuid4(), name=name, tracks=selected_tracks)
 
     # Cache the playlist
     playlists[playlist.uuid] = playlist
     return {"playlist": playlist}
 
 
-@router.get("/{uuid}/download")
-def download_playlist(uuid: UUID):
-    playlist = playlists[uuid]
-    # Download using the YT converter
-    exporter.YouTubeExporter().export(playlist)
-    return {"message": "Downloaded playlist successfully."}
+@router.get("/download/{uuid}")
+def download_playlist(uuid: UUID, background_tasks: BackgroundTasks):
+    BUFFERIZE = 1024 * 1024  # Reading in 1 MB chunks
+
+    playlist = playlists.get(uuid, None)
+
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found.")
+
+    export_file = exporter.YouTubeExporter().export(playlist)
+
+    # Add a cleanup task for removing the zip file
+    def cleanup():
+        try:  # Remove the zip file
+            if os.path.isfile(export_file):
+                os.remove(export_file)
+        except Exception as error:
+            # Log the error if cleanup fails
+            print(f"Cleanup failed: {error}")
+
+    background_tasks.add_task(cleanup)
+
+    # Create a generator to stream the zip file
+    def iterfile():
+        with open(export_file, "rb") as file:
+            while chunk := file.read(BUFFERIZE): yield chunk
+
+    headers = {"Content-Disposition": f'attachment; filename="{playlist.name}"'}
+
+    # Return the zip file as a streaming response
+    return StreamingResponse(iterfile(), headers=headers, media_type="application/zip")

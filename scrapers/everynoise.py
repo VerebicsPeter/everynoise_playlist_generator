@@ -9,9 +9,7 @@ def catchall(func):
         except Exception as e:
             print(f"An error occurred: {e}")
             return []
-
     return wrapper
-
 
 
 def get_html(url: str) -> str:
@@ -26,6 +24,21 @@ def get_html(url: str) -> str:
 
 
 @catchall
+def scrape_genre_names(url: str = "https://everynoise.com/") -> list[str]:
+    """Scrape genre names from everynoise"""
+    data = []
+    html = get_html(url)
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Scrape the page
+    divs = soup.find_all("div", id=lambda x: x and x.startswith("item"))
+    for div in divs:
+        name = div.get_text(strip=True)[:-1]
+        data.append(name)
+    return data
+
+
+@catchall
 def scrape_genre_data(url: str) -> list[dict]:
     """Scrape data from an everynoise genre page"""
     data = []
@@ -35,14 +48,19 @@ def scrape_genre_data(url: str) -> list[dict]:
     # Scrape the page
     divs = soup.find_all("div", id=lambda x: x and x.startswith("item"))
     for div in divs:
-        name = div.get_text(strip=True)[:-1]
+        artist_name = div.get_text(strip=True)[:-1]
+        
         link = div.find("a").get("href")
-        if not link:
+        
+        if not link or len(link.split('=')) != 2:
             continue
+        
+        artist_link = link.split('=')[1]
+        
         data.append(
             {
-                "artist_name": name,
-                "artist_link": link,
+                "artist_name": artist_name,
+                "artist_link": artist_link,
             }
         )
     # Return the scraped data

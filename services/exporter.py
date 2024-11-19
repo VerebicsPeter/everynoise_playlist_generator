@@ -1,22 +1,29 @@
 import os
+import subprocess
 
 import services.downloader as downloader
-from data.models import Playlist
+from data.schemas import PlaylistSchema
 from typing import Protocol
 
 
 class PlaylistExporter(Protocol):
-    def export(self, playlist: Playlist): ...
+    def export(self, playlist: PlaylistSchema): ...
 
 
 class YouTubeExporter(PlaylistExporter):
     def __init__(self):
         # Create the downloads directory if it's not present
-        if not os.path.isdir("./downloads"): os.mkdir("./downloads")
+        if not os.path.isdir("./downloads/mp3"): os.mkdir("./downloads/mp3")
     
-    def export(self, playlist: Playlist):
-        playlist_path = f'./downloads/{playlist.name}'
-        if not os.path.isdir(playlist_path): os.mkdir(playlist_path)
+    def export(self, playlist: PlaylistSchema) -> str:
+        file_paths: list[str] = []
+        
         for track in playlist.tracks:
-            query = f"{track.artist.name} - {track.title}"
-            downloader.download_audio(query, playlist_path)
+            query = f"{track.artist.name} - {track.name}"
+            path = downloader.download_audio(query, "./downloads/mp3")
+            # add the file path to the list of paths
+            file_paths.append(path)
+        
+        playlist_file = f'./downloads/{playlist.uuid}.zip'
+        subprocess.run(['zip', '-j', playlist_file, *file_paths])
+        return playlist_file
