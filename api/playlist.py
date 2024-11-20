@@ -1,6 +1,5 @@
 import os
 import random
-
 import uuid
 from uuid import UUID
 
@@ -15,20 +14,25 @@ from data.schemas import ArtistSchema, TrackSchema, PlaylistSchema
 from scrapers import everynoise
 from services import exporter
 
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 
-Session = sessionmaker(bind=engine)
-session = Session()
+# Async session setup
+ASYNC_ENGINE = create_async_engine(str(engine.url), echo=True)
+AsyncSessionLocal = sessionmaker(
+    ASYNC_ENGINE, class_=AsyncSession, expire_on_commit=False
+)
 
 # Global state for now
-# TODO: database and caching
 playlists: dict[UUID, PlaylistSchema] = {}
 
 router = APIRouter()
 
 
-def get_tracks(artist: ArtistSchema) -> list[TrackSchema]:
+async def get_tracks(artist: ArtistSchema) -> list[TrackSchema]:
     """Get tracks of an artist"""
-    data = everynoise.scrape_artist_data(
+    data = await everynoise.scrape_artist_data(
         f"https://everynoise.com/artistprofile.cgi?id={artist.link}"
     )
     tracks = [
@@ -43,7 +47,7 @@ def get_tracks(artist: ArtistSchema) -> list[TrackSchema]:
 
 
 @router.get("/")
-def index() -> dict:
+async def index() -> dict:
     return {
         "message": " ".join(
             [
@@ -56,39 +60,43 @@ def index() -> dict:
 
 
 @router.get("/generate")
-def generate_playlist(
+async def generate_playlist(
     name: str = "new playlist",
     genre_name: str = "pop",
     num_artists: int = 5,
     tracks_per_artist: int = 3,
 ) -> dict:
-    genre = session.query(Genre).filter_by(name=genre_name).first()
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Genre).options(joinedload(Genre.artists)).filter_by(name=genre_name)
+        )
+        genre = result.scalars().first()
 
-    if not genre:
-        return {"message": f"No genre named: {genre_name}"}
+        if not genre:
+            return {"message": f"No genre named: {genre_name}"}
+        
+        artists = genre.artists
 
-    artists = genre.artists
+        if not artists:
+            return {"message": f"No artists in genre: {genre_name}"}
 
-    if not artists:
-        return {"message": f"No artists in genre: {genre_name}"}
+        selected_tracks: list[TrackSchema] = []
+        # Sample artists in genre
+        for artist in random.sample(artists, min(len(artists), num_artists)):
+            tracks = await get_tracks(ArtistSchema(name=artist.name, link=artist.link))
+            # Sample tracks
+            tracks = random.sample(tracks, min(len(tracks), tracks_per_artist))
+            selected_tracks.extend(tracks)
 
-    selected_tracks: list[TrackSchema] = []
-    # Sample artists in genre
-    for artist in random.sample(artists, min(len(artists), num_artists)):
-        tracks = get_tracks(ArtistSchema(name=artist.name, link=artist.link))
-        # Sample tracks
-        tracks = random.sample(tracks, min(len(tracks), tracks_per_artist))
-        selected_tracks.extend(tracks)
+        playlist = PlaylistSchema(uuid=uuid.uuid4(), name=name, tracks=selected_tracks)
 
-    playlist = PlaylistSchema(uuid=uuid.uuid4(), name=name, tracks=selected_tracks)
-
-    # Cache the playlist
-    playlists[playlist.uuid] = playlist
-    return {"playlist": playlist}
+        # Cache the playlist
+        playlists[playlist.uuid] = playlist
+        return {"playlist": playlist}
 
 
 @router.get("/download/{uuid}")
-def download_playlist(uuid: UUID, background_tasks: BackgroundTasks):
+async def download_playlist(uuid: UUID, background_tasks: BackgroundTasks):
     BUFFERIZE = 1024 * 1024  # Reading in 1 MB chunks
 
     playlist = playlists.get(uuid, None)
@@ -96,7 +104,7 @@ def download_playlist(uuid: UUID, background_tasks: BackgroundTasks):
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found.")
 
-    export_file = exporter.YouTubeExporter().export(playlist)
+    export_file = await exporter.YouTubeExporter().export(playlist)
 
     # Add a cleanup task for removing the zip file
     def cleanup():
@@ -110,9 +118,10 @@ def download_playlist(uuid: UUID, background_tasks: BackgroundTasks):
     background_tasks.add_task(cleanup)
 
     # Create a generator to stream the zip file
-    def iterfile():
+    async def iterfile():
         with open(export_file, "rb") as file:
-            while chunk := file.read(BUFFERIZE): yield chunk
+            while chunk := file.read(BUFFERIZE):
+                yield chunk
 
     headers = {"Content-Disposition": f'attachment; filename="{playlist.name}"'}
 

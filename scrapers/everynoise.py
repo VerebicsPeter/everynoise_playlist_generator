@@ -1,33 +1,40 @@
+import functools
+
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 
 def catchall(func):
-    def wrapper(*args, **kwargs):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            # Await the function if async
+            return await func(*args, **kwargs)
         except Exception as e:
             print(f"An error occurred: {e}")
+            # Return an empty list in case of error
             return []
     return wrapper
 
 
-def get_html(url: str) -> str:
-    with sync_playwright() as pw:
-        # Launch a headless browser
-        page = pw.chromium.launch(headless=True).new_page()
-        # Navigate to the page
-        page.goto(url)
-        # Get the page content
-        html = page.content()
+async def get_html(url: str) -> str:
+    async with async_playwright() as pw:
+        # Launch a headless browser asynchronously
+        browser = await pw.chromium.launch(headless=True)
+        page = await browser.new_page()
+        # Navigate to the page asynchronously
+        await page.goto(url)
+        # Get the page content asynchronously
+        html = await page.content()
+        await browser.close()
     return html
 
 
 @catchall
-def scrape_genre_names(url: str = "https://everynoise.com/") -> list[str]:
+async def scrape_genre_names(url: str = "https://everynoise.com/") -> list[str]:
     """Scrape genre names from everynoise"""
     data = []
-    html = get_html(url)
+    html = await get_html(url)
     soup = BeautifulSoup(html, "html.parser")
 
     # Scrape the page
@@ -39,10 +46,10 @@ def scrape_genre_names(url: str = "https://everynoise.com/") -> list[str]:
 
 
 @catchall
-def scrape_genre_data(url: str) -> list[dict]:
+async def scrape_genre_data(url: str) -> list[dict]:
     """Scrape data from an everynoise genre page"""
     data = []
-    html = get_html(url)
+    html = await get_html(url)
     soup = BeautifulSoup(html, "html.parser")
 
     # Scrape the page
@@ -68,10 +75,10 @@ def scrape_genre_data(url: str) -> list[dict]:
 
 
 @catchall
-def scrape_artist_data(url: str) -> list[dict]:
+async def scrape_artist_data(url: str) -> list[dict]:
     """Scrape data from an everynoise artist page"""
     data = []
-    html = get_html(url)
+    html = await get_html(url)
     soup = BeautifulSoup(html, "html.parser")
 
     # Scrape the page
