@@ -3,18 +3,15 @@
 import os
 import asyncio
 
-# using yt-dlp for downloading from yt
 import yt_dlp
 
 from typing import Protocol
-
 from data.schemas import PlaylistSchema
 
 
-def run_yt_dlp(ydl_opts, query):
-    """Wrapper function to run yt_dlp synchronously within an executor"""
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([f"ytsearch:{query}"])
+def run_yt_dlp(yt_dlp_opts, query):
+    """Wrapper function to run yt_dlp within an executor to avoiding blocking IO"""
+    with yt_dlp.YoutubeDL(yt_dlp_opts) as ydl: ydl.download([f"ytsearch:{query}"])
 
 
 class PlaylistExporter(Protocol):
@@ -36,9 +33,7 @@ class YouTubeExporter(PlaylistExporter):
                 return await self.download_audio(query)
 
         tasks = [
-            limited_download(
-                f"{track.artist.name} - {track.name}",
-            )
+            limited_download(query=f"{track.artist.name} - {track.name}")
             for track in playlist.tracks
         ]
 
@@ -63,14 +58,13 @@ class YouTubeExporter(PlaylistExporter):
         if os.path.isfile(file_path):
             return file_path
 
-        # Download using yt_dlp
-        ydl_opts = {
+        yt_dlp_opts = {
             "format": "bestaudio/best",
             "outtmpl": DOWN_PATH,
         }
-
+        # Download using yt_dlp
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, run_yt_dlp, ydl_opts, query)
+        await loop.run_in_executor(None, run_yt_dlp, yt_dlp_opts, query)
 
         # Convert to mp3 using ffmpeg
         ffmpeg_process = await asyncio.create_subprocess_exec(

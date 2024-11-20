@@ -20,4 +20,4 @@ class TrackSchema(BaseModel):
 class PlaylistSchema(BaseModel):
     uuid: UUID
     name: str
-    tracks: List[TrackSchema] = Field(..., max_items=50)
+    tracks: List[TrackSchema] = Field(..., max_items=100)  # Limit playlist size for now

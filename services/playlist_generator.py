@@ -12,11 +12,12 @@ from data.db import async_engine, Genre
 from data.schemas import ArtistSchema, TrackSchema, PlaylistSchema
 
 from scrapers import everynoise
+from services import playlist_exporter
 
 
-# Global state for now
+# In memory storage
 playlists: dict[UUID, PlaylistSchema] = {}
-
+filepaths: dict[UUID, str] = {}
 
 AsyncSessionLocal = sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
@@ -72,3 +73,19 @@ async def get_playlist(
         # Cache the playlist
         playlists[playlist.uuid] = playlist
         return playlist
+
+
+async def export_playlist(uuid: UUID):
+    playlist = playlists.get(uuid, None)
+
+    if not playlist:
+        return {"message": "Playlist not found."}
+    
+    try:
+        file_path = await playlist_exporter.YouTubeExporter().export(playlist)
+        filepaths[uuid] = file_path
+    except Exception as error:
+        print(f"Something went wrong while converting playlist: {error}")
+        return {"message": "Playlist conversion failed."}
+    
+    return {"status": "Success"}
