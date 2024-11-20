@@ -1,7 +1,9 @@
 # Pydantic schemas for validation
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
+
+from typing import List
 
 
 class ArtistSchema(BaseModel):
@@ -18,4 +20,4 @@ class TrackSchema(BaseModel):
 class PlaylistSchema(BaseModel):
     uuid: UUID
     name: str
-    tracks: list[TrackSchema]
+    tracks: List[TrackSchema] = Field(..., max_items=50)
