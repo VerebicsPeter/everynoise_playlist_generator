@@ -38,6 +38,7 @@ class YouTubeExporter(PlaylistExporter):
         ]
 
         paths = await asyncio.gather(*tasks)
+        print('INFO: Convreted files to download.')
 
         playlist_file = f"{self.download_dir}/{playlist.uuid}.zip"
         # Use async subprocess to zip files
@@ -47,6 +48,7 @@ class YouTubeExporter(PlaylistExporter):
             stderr=asyncio.subprocess.PIPE,
         )
         await zip_process.communicate()
+        print('INFO: Created zip file.')
 
         return playlist_file
 
