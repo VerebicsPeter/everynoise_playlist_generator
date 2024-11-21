@@ -19,8 +19,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install
-RUN playwright install-deps
+# Not needed for deployment
+#RUN playwright install
+#RUN playwright install-deps
 
 # Copy the rest of the application code
 COPY . .
