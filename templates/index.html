@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Every Noise at Once Playlist Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <!-- Main container -->
+    <div class="max-w-5xl mx-auto p-6">
+        <!-- Header -->
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-4">Every Noise at Once Playlist Generator</h1>
+
+        <div class="flex flex-col lg:flex-row bg-gray-100 p-2 items-stretch">
+            <!-- Left Side: Form -->
+            <div class="w-full lg:w-1/2 p-4 flex items-stretch">
+                <form hx-get="/playlist/generate" hx-target="#playlist_data" hx-swap="innerHTML" hx-indicator="#spinner"
+                    class="bg-white shadow-md rounded-lg p-6 space-y-4 w-full">
+                    <!-- Playlist Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Playlist Name:</label>
+                        <input type="text" id="name" name="name" required
+                            class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+        
+                    <!-- Genre -->
+                    <div>
+                        <label for="genre_name" class="block text-sm font-medium text-gray-700">Genre:</label>
+                        <input type="text" id="genre_name" name="genre_name" required
+                            class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+        
+                    <!-- Number of Artists -->
+                    <div>
+                        <label for="num_art" class="block text-sm font-medium text-gray-700">Number of Artists:</label>
+                        <input type="number" id="num_art" name="num_artists" value="5" min="1" max="10" required
+                            class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+        
+                    <!-- Tracks per Artist -->
+                    <div>
+                        <label for="num_tpa" class="block text-sm font-medium text-gray-700">Tracks per Artist:</label>
+                        <input type="number" id="num_tpa" name="num_t_per_a" value="1" min="1" max="10" required
+                            class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <hr>
+                    <!-- Submit Button -->
+                    <div class="text-center">
+                        <button type="submit"
+                            class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            Generate Playlist
+                        </button>
+                    </div>
+                </form>
+            </div>
+        
+            <!-- Right Side: Article -->
+            <div class="w-full lg:w-1/2 p-4 flex items-stretch">
+                <article class="bg-white shadow-md rounded-lg p-6 w-full">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">About this site</h2>
+                    <p class="text-gray-700">
+                        This site lets you randomly create playlists from the genres and artists found on <a href="https://everynoise.com/" target=_blank><i>every noise at once</i></a>.
+                    </p>
+                    
+                    <p class="text-gray-700 mt-4">
+                        It’s a fun way to explore new music. Every time you click you may find something unique thanks to everynoise's genre map.
+                        On top of that, you can also download the playlists as MP3s directly from YouTube.
+                    </p>
+                    
+                    <p class="text-gray-700 mt-4">
+                        Usage is really simple just type in the genre, select the number of artists to pick and the number of tracks to pick per artist.
+                        If the playlist is generated you have the choice to convert and download it.
+                    </p>
+                </article>
+            </div>
+        </div>
+
+        <!-- Playlist Data -->
+        <div id="playlist" class="p-6">
+            <div class="bg-white shadow-md rounded-lg p-6 text-center">
+                <p id="playlist_data" class="text-gray-600 mb-2">Playlists will appear here.</p>
+                <div id="spinner"
+                    class="htmx-indicator mx-auto w-8 h-8 border-4 border-t-transparent border-blue-500 rounded-full animate-spin">
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <div id="playlist" class="p-6 text-center">
+            <a href="https://github.com/VerebicsPeter/everynoise_playlist_generator" target=_blank>source code</a>
+        </div>
+    </div>
+</body>
+
+</html>

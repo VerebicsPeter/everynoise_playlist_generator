@@ -1,0 +1,7 @@
+{% if result.status == "Success" %}
+    <p>Converted playlist.</p>
+    <br>
+    <a href="/api/playlist/download/{{ uuid }}">Download Playlist</a>
+{% else %}
+    <p>Conversion failed.</p>
+{% endif %}

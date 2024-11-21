@@ -1,0 +1,42 @@
+<div class="bg-white">
+    <p class="text-lg font-semibold text-green-500">Playlist generated.</p>
+    <table class="table-auto w-full text-gray-800 mt-2 mb-6">
+        <thead>
+            <tr class="border-b border-gray-300">
+                <th class="px-4 py-2 text-left">Artist</th>
+                <th class="px-4 py-2 text-left">Track</th>
+                <th class="px-4 py-2 text-right">Preview</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for track in tracks %}
+                <tr class="border-b border-gray-200">
+                    <td class="px-4 py-2 text-left">{{ track.artist.name }}</td>
+                    <td class="px-4 py-2 text-left">{{ track.name }}</td>
+                    <td class="px-4 py-2 text-right">
+                        <div class="flex justify-end">
+                            <iframe
+                                src="https://open.spotify.com/embed/track/{{ track.link | replace('spotify:track:', '') }}"
+                                width="240" height="80"
+                                frameborder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                                class="rounded-lg">
+                            </iframe>
+                        </div>
+                    </iframe>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>    
+    <div class="mt-4">
+        <button id="convert-button"
+            hx-target="#convert-button"
+            hx-get="/playlist/convert/{{ uuid }}"
+            hx-swap="outerHTML"
+            hx-indicator="#spinner"
+            class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            Convert Playlist
+        </button>
+    </div>
+</div>

@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+
 from routes.api import playlist as playlist_api
 from routes.ssr import playlist as playlist_ssr
-
 
 app = FastAPI()
 

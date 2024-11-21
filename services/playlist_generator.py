@@ -23,7 +23,7 @@ AsyncSessionLocal = sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
 )
 
-
+# TODO: use spofity's API instead should be much faster
 async def get_tracks(artist: ArtistSchema) -> list[TrackSchema]:
     """Get tracks of an artist"""
     data = await everynoise.scrape_artist_data(
