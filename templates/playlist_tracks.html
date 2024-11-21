@@ -16,7 +16,7 @@
                     <td class="px-4 py-2 text-right">
                         <div class="flex justify-end">
                             <iframe
-                                src="https://open.spotify.com/embed/track/{{ track.link | replace('spotify:track:', '') }}"
+                                src="https://open.spotify.com/embed/track/{{ track.spotify_id | replace('spotify:track:', '') }}"
                                 width="280" height="80"
                                 frameborder="0"
                                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
@@ -30,7 +30,7 @@
         </tbody>
     </table>    
     <div class="mt-4">
-        <button id="convert-button"
+        <button id="convert-button" hidden
             hx-target="#convert-button"
             hx-get="/playlist/convert/{{ uuid }}"
             hx-swap="outerHTML"

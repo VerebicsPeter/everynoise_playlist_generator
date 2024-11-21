@@ -22,7 +22,7 @@ class Artist(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
-    link = Column(String, nullable=False, unique=True)  # EveryNoise link ID
+    spotify_id = Column(String, nullable=False, unique=True)
 
     genres: Mapped[List["Genre"]] = relationship(
         "Genre", secondary=artist_genre_table, back_populates="artists"
@@ -34,7 +34,7 @@ class Genre(Base):
     __tablename__ = "genres"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False, unique=True)  
+    name = Column(String, nullable=False, unique=True)
 
     artists: Mapped[List["Artist"]] = relationship(
         "Artist", secondary=artist_genre_table, back_populates="genres"

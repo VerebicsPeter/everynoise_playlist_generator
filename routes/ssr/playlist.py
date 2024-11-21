@@ -38,6 +38,11 @@ async def generate_playlist(request: Request):
         context = {"error": error, "message": message}
         return templates.TemplateResponse(request, "error_message.html", context)
     
+    if not result.tracks:
+        error = "Playlist could not be generated."
+        context = {"error": error, "message": "No tracks found."}
+        return templates.TemplateResponse(request, "error_message.html", context)
+    
     context = {"uuid": result.uuid, "tracks": result.tracks}
     return templates.TemplateResponse(request, "playlist_tracks.html", context)
 
