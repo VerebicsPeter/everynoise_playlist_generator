@@ -32,11 +32,11 @@ class YouTubeExporter(PlaylistExporter):
             async with semaphore:
                 return await self.download_audio(query)
 
-        tasks = [
-            limited_download(query=f"{track.artist.name} - {track.name}")
-            for track in playlist.tracks
-        ]
-
+        tasks = []
+        for track in playlist.tracks:
+            artists = ', '.join(artist.name for artist in track.artists)
+            tasks.append(limited_download(query=f"{artists} - {track.name}"))
+        
         paths = await asyncio.gather(*tasks)
         print('INFO: Convreted files to download.')
 

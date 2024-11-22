@@ -12,10 +12,12 @@ class ArtistSchema(BaseModel):
 
 
 class TrackSchema(BaseModel):
-    artist: ArtistSchema
     name: str
     spotify_id: str
-    # Optional Spotify link to preview the track
+    artists: List[ArtistSchema]
+    # Optional: duration in milliseconds
+    duration_ms: Optional[int] = 0
+    # Optional: Spotify link to preview the track
     spotify_preview_url: Optional[str] = None
 
 

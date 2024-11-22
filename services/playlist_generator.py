@@ -124,19 +124,36 @@ async def spot_get_all_tracks_by_artist(artist_id: str):
 
 async def get_tracks(artist: Artist, get_all: bool = False) -> list[TrackSchema]:
     """Get tracks of an artist"""
-    artist_schema = ArtistSchema(name=artist.name, spotify_id=artist.spotify_id)
     # Select the appropriate getter based on `get_all`
-    getter = spot_get_all_tracks_by_artist if get_all else spot_get_top_tracks_by_artist
-    tracks = await getter(artist.spotify_id)
-    result = [
+    if get_all:
+        tracks = await spot_get_all_tracks_by_artist(artist.spotify_id)
+    else:
+        tracks = await spot_get_top_tracks_by_artist(artist.spotify_id)
+    
+    track_artists = {
+        track["id"]:
+        [
+            ArtistSchema(
+                name=artist["name"],
+                spotify_id=artist["id"],
+            )
+            for artist in track["artists"]
+        ]
+        for track in tracks
+    }
+    
+    track_schemas = [
         TrackSchema(
-            artist=artist_schema,
+            artists=track_artists[track["id"]],
             name=track["name"],
             spotify_id=track["id"],
             spotify_preview_url=track["preview_url"],
-        ) for track in tracks
+            duration_ms=track["duration_ms"]
+        )
+        for track in tracks
     ]
-    return result
+    
+    return track_schemas
 
 
 async def get_playlist(
@@ -151,9 +168,10 @@ async def get_playlist(
         return random.sample(tracks, min(len(tracks), num_t_per_a))
 
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
+        query = (
             select(Genre).options(joinedload(Genre.artists)).filter_by(name=genre_name)
         )
+        result = await session.execute(query)
 
         genre = result.scalars().first()
         if not genre:
@@ -175,7 +193,7 @@ async def get_playlist(
 
         playlist = PlaylistSchema(uuid=uuid4(), name=name, tracks=sampled_tracks)
 
-        # Cache the playlist
+        # Cache the playlist into memory
         playlists[playlist.uuid] = playlist
         return playlist
 
@@ -190,7 +208,7 @@ async def export_playlist(uuid: UUID):
         file_path = await playlist_exporter.YouTubeExporter().export(playlist)
         filepaths[uuid] = file_path
     except Exception as error:
-        print(f"Something went wrong while converting playlist: {error}")
+        print(f"Something went wrong while converting playlist:\n{error}")
         return {"message": "Playlist conversion failed."}
 
     return {"status": "Success"}

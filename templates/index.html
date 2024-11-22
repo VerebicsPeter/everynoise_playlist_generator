@@ -21,7 +21,11 @@
         <div class="flex flex-col lg:flex-row bg-gray-100 p-2 items-stretch">
             <!-- Left Side: Form -->
             <div class="w-full lg:w-1/2 p-4 flex items-stretch">
-                <form hx-get="/playlist/generate" hx-target="#playlist_data" hx-swap="innerHTML" hx-indicator="#spinner"
+                <form 
+                    hx-get="/playlist/generate"
+                    hx-target="#playlist_data"
+                    hx-swap="innerHTML"
+                    hx-indicator="#spinner"
                     class="bg-white shadow-md rounded-lg p-6 space-y-4 w-full">
                     <!-- Playlist Name -->
                     <div>
@@ -33,8 +37,13 @@
                     <!-- Genre -->
                     <div>
                         <label for="genre_name" class="block text-sm font-medium text-gray-700">Genre:</label>
-                        <input type="text" id="genre_name" name="genre_name" required
+                        <input type="text" id="genre_name" name="genre_name" required autocomplete="off"
+                            hx-get="/playlist/search-genre"
+                            hx-trigger="keyup changed delay:600ms"
+                            hx-target="#hints"
+                            hx-swap="outerHTML"
                             class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <div id="hints" class="mt-2 text-sm text-gray-500"></div>
                     </div>
         
                     <!-- Number of Artists -->
@@ -52,11 +61,14 @@
                     </div>
                     <hr>
                     <!-- Submit Button -->
-                    <div class="text-center">
+                    <div class="text-center flex">
                         <button type="submit"
                             class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             Generate Playlist
                         </button>
+                        <div id="spinner"
+                            class="htmx-indicator mx-auto mt-2 w-8 h-8 border-4 border-t-transparent border-blue-500 rounded-full animate-spin">
+                        </div>
                     </div>
                 </form>
             </div>
@@ -70,7 +82,7 @@
                     </p>
                     
                     <p class="text-gray-700 mt-4">
-                        It’s a fun way to explore new music. Every time you click you may find something unique thanks to everynoise's genre map.
+                        It’s a fun way to explore new music. Every time you click you may find something unique.
                         On top of that, you can also download the playlists as MP3s directly from YouTube.
                     </p>
                     
@@ -86,9 +98,6 @@
         <div id="playlist" class="p-6">
             <div class="bg-white shadow-md rounded-lg p-6 text-center">
                 <p id="playlist_data" class="text-gray-600 mb-2">Playlists will appear here.</p>
-                <div id="spinner"
-                    class="htmx-indicator mx-auto w-8 h-8 border-4 border-t-transparent border-blue-500 rounded-full animate-spin">
-                </div>
             </div>
         </div>
 

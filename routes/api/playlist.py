@@ -12,35 +12,6 @@ from services import playlist_generator
 router = APIRouter()
 
 
-@router.get("/")
-async def index() -> dict:
-    return {
-        "message": " ".join(
-            [
-                "Welcome!",
-                "This is a simple API for generating playlists",
-                "based on genres listed on 'everynoise.com'.",
-            ]
-        )
-    }
-
-
-@router.get("/generate")
-async def generate_playlist(
-    name: str = "new playlist",
-    genre_name: str = "pop",
-    num_art: int = 5,
-    num_tpa: int = 3,
-) -> dict:
-    playlist = await playlist_generator.get_playlist(
-        name=name,
-        genre_name=genre_name,
-        num_artists=num_art,
-        num_t_per_a=num_tpa,
-    )
-    return {"playlist": playlist}
-
-
 @router.get("/download/{uuid}")
 async def download_playlist(uuid: UUID, background_tasks: BackgroundTasks):
     BUFFERIZE = 1024 * 1024  # Reading in 1 MB chunks
